@@ -211,6 +211,7 @@ var PrimaryView = View.extend({
 
         $( "[data-hook='exportToPublic']" ).click(_.bind(this.exportModel, this));
         $( "[data-hook='exportToZip']" ).click(_.bind(this.exportModelAsZip, this));
+        $( "[data-hook='exportToIpynb']" ).click(_.bind(this.exportToIpynb, this));
 
         $( '[data-hook="duplicateLink"]' ).click( _.bind( function() {
             this.modelEditor.duplicateModel();
@@ -366,6 +367,15 @@ var PrimaryView = View.extend({
         }
 
         this.updateModelNameText();
+    },
+    exportToIpynb: function()
+    {
+        $.ajax( { type : 'GET',
+                  url : '/modeleditor',
+                  data : { reqType : 'exportToIpynb', id : this.modelSelector.selected.id },
+                  dataType : 'json',
+                  success : _.bind(this.forwardToFile, this) // TODO: Fix this line, file is downloaded on success
+                } )
     },
     exportModelAsZip: function()
     {

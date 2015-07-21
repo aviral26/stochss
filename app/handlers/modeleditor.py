@@ -584,7 +584,75 @@ class ModelEditorPage(BaseHandler):
         return True
     
     def get(self):
-        if self.request.get('reqType') == 'exportToZip':
+        if self.request.get('reqType') == 'exportToIpynb':
+            modelId = int(self.request.get('id'));
+
+            model = StochKitModelWrapper.get_by_id(modelId)
+            
+            try:
+                import IPython.nbformat.current as nbf
+
+                filename = model.name + '.ipynb'
+                if model.isSpatial:
+                    init_str = 'import pyurdme\nimport numpy\n'
+                else:
+                    init_str = 'import gillespy\nimport numpy\n'
+                run_str = "model = {0}()\nresult = model.run()\n".format(model.name)
+                model_str = model.createPythonClassStr()
+
+                self.response.headers['Content-Type'] = 'application/octet-stream'
+                self.response.headers['Content-Disposition'] = 'attachment; filename="{0}"'.format(filename) 
+
+                ipynb_data_struc = \
+                {u'metadata': {u'name': u'{0}'.format(model.name)},
+                 u'nbformat': 3,
+                 u'nbformat_minor': 0,
+                 u'worksheets':[{
+                    u'metadata':{},
+                    u'cells':[
+                        {u'cell_type': u'code',
+                         u'collapsed': False,
+                         u'input': u"{0}".format(init_str),
+                         u'language': u'python',
+                         u'metadata': {},
+                         u'outputs': [],
+                         u'prompt_number': 1},
+                        {u'cell_type': u'code',
+                         u'collapsed': False,
+                         u'input': u"{0}".format(model_str),
+                         u'language': u'python',
+                         u'metadata': {},
+                         u'outputs': [],
+                         u'prompt_number': 2},
+                        {u'cell_type': u'code',
+                         u'collapsed': False,
+                         u'input': u"{0}".format(run_str),
+                         u'language': u'python',
+                         u'metadata': {},
+                         u'outputs': [],
+                         u'prompt_number': 3},
+                    ]
+                 }]
+                }
+                import StringIO
+                output = StringIO.StringIO()
+                nbf.write(ipynb_data_struc, output,'ipynb')
+                contents = output.getvalue()
+                self.response.headers['Content-Type'] = 'application/octet-stream'
+                self.response.headers['Content-Disposition'] = 'attachment; filename="{0}"'.format(filename) 
+                self.response.write(contents)
+
+            except Exception as e:
+                traceback.print_exc()
+                result = {}
+                result['status'] = False
+                result['msg'] = 'Error: {0}'.format(e)
+                self.response.headers['Content-Type'] = 'application/json'
+                self.response.write(json.dumps(result))
+
+            return
+
+        elif self.request.get('reqType') == 'exportToZip':
             modelId = int(self.request.get('id'));
 
             model = StochKitModelWrapper.get_by_id(modelId)
