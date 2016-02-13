@@ -11,18 +11,23 @@ import webbrowser
 import uuid
 import socket
 
-source_exec = sys.argv[1]
+open_browser = sys.argv[2]
+print("open browser is {0}".format(open_browser))
 host_ip = socket.gethostbyname(socket.gethostname())
-try:
-    vm_ip = sys.argv[4]
-except IndexError:
-    vm_ip = host_ip
 
 try:
     admin_token = sys.argv[3]
+    print("Received token {0}".format(admin_token))
 except IndexError:
     print("Admin token not found")
     exit(-1)
+
+
+try:
+    vm_ip = sys.argv[4]
+    print("Received vm_ip {0}".format(vm_ip))
+except IndexError:
+    vm_ip = host_ip
 
 mac = False
 if 'mac' in sys.argv:
@@ -39,44 +44,6 @@ try:
     os.mkdir('{0}/app/static/tmp'.format(path))
 except:
     pass
-
-if os.path.isfile('app/update'):
-    if mac:
-        print "<h2>Updating application now</h2><br />"
-    else:
-        sys.stdout.write('Updating application now...')
-    sys.stdout.flush()
-
-    h = subprocess.Popen('git stash'.split())
-    h.communicate()
-    if h.returncode != 0:
-        os.remove('app/update')
-        print "Error in updating, exiting"
-        if mac:
-            print "<br />"
-        sys.stdout.flush()
-        exit(-1)
-
-    h = subprocess.Popen('git pull'.split())
-    h.communicate()
-    if h.returncode != 0:
-        os.remove('app/update')
-        print "Error in updating, exiting"
-        if mac:
-            print "<br />"
-        sys.stdout.flush()
-        exit(-1)
-
-    # print "Success"
-    print "Done updating, relaunching {0}...".format(source_exec)
-    if mac:
-        print "<br />"
-    os.remove('app/update')
-
-    sys.stderr.flush()
-    sys.stdout.flush()
-
-    os.execl(source_exec, source_exec)
 
 if mac:
     print "<h2>Running StochSS Server</h2><br />"
@@ -207,21 +174,24 @@ for tryy in range(0, 20):
 
 if serverUp:
     # Set up admin token
-    
-    try:
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app/handlers/admin_uuid.txt'), 'w') as file:
-            file.write(str(admin_token))
-    except Exception as e:
-        print " File write error: cannot create admin token {0}".format(str(e))
-    # generate_admin_token_command = './generate_admin_token.py {0}'.format(admin_token)
-    # os.system(generate_admin_token_command)
+    if admin_token == "not_set":
+        admin_token = uuid.uuid4()
+        generate_admin_token_command = './generate_admin_token.py {0}'.format(admin_token)
+        os.system(generate_admin_token_command)
+    else:
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app/handlers/admin_uuid.txt'), 'w') as file:
+                file.write(str(admin_token))
+        except Exception as e:
+            print " File write error: cannot create admin token {0}".format(str(e))
+
     stochss_url = 'http://{1}:8080/login?secret_key={0}'.format(admin_token, host_ip)
     # Open web browserterminal
 
-    if mac:
+    if mac and open_browser == "true":
         wbrowser = subprocess.Popen('open {0}'.format(stochss_url).split())
         wbrowser.communicate()
-    else:
+    elif open_browser == "true":
         webbrowser.open_new(stochss_url)
 
     if mac:
